@@ -1,0 +1,7 @@
+</div><%-- /.wrap mo o head.jspf --%>
+
+    <div class="footer">
+        LTWeb · BT2 — CRUD Category &amp; Video bằng JPA (Hibernate 7) · Jakarta EE 11
+    </div>
+</body>
+</html>

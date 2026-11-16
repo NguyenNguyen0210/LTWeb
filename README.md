@@ -5,7 +5,15 @@ Repo gồm các bài tập môn Lập trình Web, mỗi bài nằm trong một t
 | Bài | Nội dung | Công nghệ |
 |---|---|---|
 | [BT1](BT1/) | 3 tầng, 3 trang JSP, servlet xử lý 4 URL | Jakarta Servlet 6.1, JSP 4.0, JSTL 3.0, Tomcat 11 |
-| [BT2](BT2/) | CRUD `Category` bằng JPA, quan hệ 1-n với `Video`, upload ảnh, tìm kiếm, phân trang | JPA 3.2, Hibernate 7.4.6, SQL Server, Tomcat 11 |
+| [BT2](BT2/) | Đăng ký + kích hoạt OTP qua email, đăng nhập mật khẩu hash BCrypt, đăng xuất, quên mật khẩu bằng OTP; CRUD `Category`; CRUD `Video` (quan hệ 1-n với `User`), trang chủ 10 video mới, `/video` phân trang 6/trang, trang xem và play video | JPA 3.2, Hibernate 7.4.6, Jakarta Mail, BCrypt, SQL Server, Tomcat 11 |
+
+### Tài khoản mẫu của BT2 (mật khẩu `123456`)
+
+| Email | Vai trò |
+|---|---|
+| `admin@ltweb.vn` | admin — vào được `/admin/categories` |
+| `user@ltweb.vn` | user — có 8 video mẫu |
+| `pending@ltweb.vn` | user chưa kích hoạt (đăng nhập sẽ bị chặn) |
 
 ## Yêu cầu chung
 

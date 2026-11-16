@@ -5,6 +5,7 @@ import java.util.List;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
 import vn.edu.hcmute.entity.Category;
+import vn.edu.hcmute.entity.User;
 import vn.edu.hcmute.entity.Video;
 
 /**
@@ -34,6 +35,17 @@ public class TestJpa {
             video.setVideoId("v01");
             video.setTitle("test");
             video.setCategory(cate);
+
+            // Video bat buoc phai thuoc 1 user (quan he 1-n User - Video)
+            User owner = enma.createQuery("SELECT u FROM User u", User.class)
+                    .setMaxResults(1).getResultList().stream().findFirst().orElse(null);
+            if (owner == null) {
+                System.out.println(">>> Chua co user nao. Hay chay database/init.sql truoc.");
+                trans.rollback();
+                return;
+            }
+            video.setUser(owner);
+            video.setCreatedAt(java.time.LocalDateTime.now());
 
             enma.persist(cate);   // nho: persist cate TRUOC de co categoryid
             enma.persist(video);

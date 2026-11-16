@@ -1,0 +1,63 @@
+<%--
+    Phan dau trang dung chung (duoc include tinh bang <%@ include %>).
+    Cac trang include file nay PHAI khai bao truoc:
+      <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
+      <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+      <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
+    va dat <c:set var="pageTitle" value="..." /> truoc khi include.
+--%>
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${pageTitle} - LTWeb</title>
+    <link rel="stylesheet" href="${ctx}/css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+    <a class="brand" href="${ctx}/home">
+        <span class="logo">LT</span>
+        <span>LTWeb
+            <small>JSP · Servlet · JPA</small>
+        </span>
+    </a>
+
+    <nav>
+        <a href="${ctx}/home">Trang chủ</a>
+        <a href="${ctx}/video">Video của tôi</a>
+        <c:if test="${sessionScope.user.admin}">
+            <a href="${ctx}/admin/categories">Quản trị</a>
+        </c:if>
+    </nav>
+
+    <div class="userbox">
+        <c:choose>
+            <c:when test="${empty sessionScope.user}">
+                <a class="btn btn-light btn-sm" href="${ctx}/login">Đăng nhập</a>
+                <a class="btn btn-primary btn-sm" href="${ctx}/register">Đăng ký</a>
+            </c:when>
+            <c:otherwise>
+                <span class="who">
+                    <span class="avatar-sm">${fn:toUpperCase(fn:substring(sessionScope.user.displayName, 0, 1))}</span>
+                    ${fn:escapeXml(sessionScope.user.displayName)}
+                </span>
+                <a class="btn btn-light btn-sm" href="${ctx}/logout">Đăng xuất</a>
+            </c:otherwise>
+        </c:choose>
+    </div>
+</div>
+
+<div class="wrap">
+
+<%-- Thong bao flash: hien 1 lan roi xoa khoi session --%>
+<c:if test="${not empty sessionScope.flashMsg}">
+    <div class="alert ${sessionScope.flashType == 'success' ? 'alert-success' : 'alert-error'}">
+        ${fn:escapeXml(sessionScope.flashMsg)}
+    </div>
+    <c:remove var="flashMsg" scope="session" />
+    <c:remove var="flashType" scope="session" />
+</c:if>
+

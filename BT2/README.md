@@ -1,7 +1,21 @@
-# BT2 — CRUD Category bằng JPA (Hibernate 7 + Jakarta EE 11)
+# BT2 — JSP/Servlet + JPA: tài khoản, OTP email, CRUD Category & Video
 
-Bài tập CRUD đầy đủ 3 tầng (`Controller → Service → DAO → JPA`) cho entity `Category`,
-quan hệ 1-n với `Video`, upload ảnh, tìm kiếm và phân trang. Chạy trên Tomcat 11 + SQL Server.
+Bài tập 02 (mở rộng). Kiến trúc 3 tầng `Controller → Service → DAO → JPA`,
+chạy trên **Tomcat 11 + SQL Server + Hibernate 7**.
+
+## Chức năng
+
+| Nhóm | Chức năng |
+|---|---|
+| Tài khoản | Đăng ký + **kích hoạt bằng OTP gửi qua email**, đăng nhập mật khẩu **hash BCrypt**, đăng xuất |
+| Quên mật khẩu | Gửi **OTP qua email**, đặt lại mật khẩu mới |
+| Category | CRUD (chỉ admin), tìm kiếm, phân trang, upload ảnh |
+| Video | CRUD video **của user đang đăng nhập**, upload file mp4/poster bằng Multipart |
+| Trang chủ | `/home` — **10 video mới nhất** |
+| Danh sách | `/video` — video của user, **6 video/trang** |
+| Xem video | `/video/detail?id=...` — chi tiết + **play** (mp4 upload, link mp4, hoặc YouTube) |
+
+Quan hệ: `User (1) — (n) Video`, `Category (1) — (n) Video`.
 
 ---
 
@@ -14,7 +28,8 @@ quan hệ 1-n với `Video`, upload ảnh, tìm kiếm và phân trang. Chạy t
 | Tomcat | 11.0.27 (`D:\apache-tomcat-11.0.27`) |
 | SQL Server | `localhost:1433`, database `webst2` |
 | Hibernate ORM | 7.4.6.Final |
-| Jakarta Persistence API | 3.2.0 |
+| Jakarta Mail | 2.1.5 + Angus Mail 2.0.5 |
+| BCrypt | jBCrypt 0.4 |
 
 > Tomcat 11 = Jakarta EE 11 → mọi import là `jakarta.*`, **không** dùng `javax.*`.
 > JSTL 3.0 dùng namespace `jakarta.tags.core` / `jakarta.tags.functions`.
@@ -23,32 +38,57 @@ quan hệ 1-n với `Video`, upload ảnh, tìm kiếm và phân trang. Chạy t
 
 ## 2. Chuẩn bị cơ sở dữ liệu
 
-**Bước 1.** Bật SQL Server (Services → `SQL Server (MSSQLSERVER)` → Start) và bật
-TCP/IP trong SQL Server Configuration Manager (nếu chưa).
+1. Bật SQL Server (Services → `SQL Server (MSSQLSERVER)` → Start), bật TCP/IP.
+2. Mở SSMS, chạy [`database/init.sql`](database/init.sql).
+   Script này **xoá và tạo lại** 3 bảng `users`, `categories`, `Videos` + dữ liệu mẫu.
+3. Kiểm tra tài khoản DB trong
+   [`src/main/resources/META-INF/persistence.xml`](src/main/resources/META-INF/persistence.xml)
+   (`sa` / `1234567@a$`) — sửa nếu máy bạn dùng mật khẩu khác.
 
-**Bước 2.** Mở SSMS, chạy file [`database/init.sql`](database/init.sql). File này:
+### Tài khoản mẫu (mật khẩu đều là `123456`)
 
-- tạo database `webst2` nếu chưa có;
-- tạo 2 bảng `categories` và `Videos` (kèm khóa ngoại);
-- thêm 7 danh mục + 2 video mẫu.
-
-**Bước 3.** Kiểm tra tài khoản đăng nhập trong
-[`src/main/resources/META-INF/persistence.xml`](src/main/resources/META-INF/persistence.xml):
-
-```xml
-<property name="jakarta.persistence.jdbc.user" value="sa"/>
-<property name="jakarta.persistence.jdbc.password" value="1234567@a$"/>
-```
-
-Nếu SQL Server của bạn dùng mật khẩu khác → **sửa đúng 2 dòng này**, không sửa chỗ nào khác.
+| Email | Vai trò | Trạng thái | Ghi chú |
+|---|---|---|---|
+| `admin@ltweb.vn` | admin | đã kích hoạt | vào được `/admin/categories` |
+| `user@ltweb.vn` | user | đã kích hoạt | có 8 video mẫu → `/video` đủ 2 trang |
+| `pending@ltweb.vn` | user | **chưa kích hoạt** | đăng nhập sẽ bị chặn |
 
 ---
 
-## 3. Chạy project
+## 3. Cấu hình gửi email OTP
 
-Double-click **`run.bat`** → script tự build, copy `bt2.war` vào Tomcat, khởi động Tomcat và mở trình duyệt.
+Mở [`src/main/resources/mail.properties`](src/main/resources/mail.properties):
 
-Hoặc chạy tay:
+```properties
+mail.smtp.host=smtp.gmail.com
+mail.smtp.port=587
+mail.username=your_email@gmail.com
+mail.password=xxxx xxxx xxxx xxxx   # App Password 16 ký tự của Gmail
+mail.from=your_email@gmail.com
+```
+
+- Gmail: bật **2-Step Verification** → tạo **App passwords** tại
+  <https://myaccount.google.com/apppasswords> → dán 16 ký tự vào `mail.password`.
+  **Không** dùng mật khẩu đăng nhập Gmail.
+- **Không commit mật khẩu thật lên GitHub.** Có thể đặt ngoài file bằng system property
+  trong `D:\apache-tomcat-11.0.27\bin\setenv.bat`:
+
+  ```bat
+  set "CATALINA_OPTS=-Dmail.username=your_email@gmail.com -Dmail.password=xxxxxxxxxxxxxxxx"
+  ```
+
+- **Chưa cấu hình SMTP?** Hệ thống tự chuyển sang **DEV mode**: không gửi mail mà in OTP ra
+  console Tomcat (`catalina.out` / cửa sổ chạy Tomcat). Trang `/verify` và `/reset` có
+  banner vàng nhắc điều này. Xem OTP ở đó để test.
+
+---
+
+## 4. Chạy project
+
+Double-click **`run.bat`** → build, copy `bt2.war` vào Tomcat, mở trình duyệt.
+Tắt Tomcat: **`stop.bat`**.
+
+Chạy tay:
 
 ```bash
 mvn clean package
@@ -56,112 +96,120 @@ cp target/bt2.war /d/apache-tomcat-11.0.27/webapps/
 /d/apache-tomcat-11.0.27/bin/startup.bat
 ```
 
-Tắt Tomcat: **`stop.bat`**.
+---
+
+## 5. Các URL
+
+| URL | Chức năng | Quyền |
+|---|---|---|
+| `/bt2/` | chuyển về `/home` | công khai |
+| `/bt2/home` | 10 video mới nhất | công khai |
+| `/bt2/register` | form đăng ký | công khai |
+| `/bt2/verify?email=...` | nhập OTP kích hoạt | công khai |
+| `/bt2/login` · `/bt2/logout` | đăng nhập / đăng xuất | công khai |
+| `/bt2/forgot` → `/bt2/reset?email=...` | quên mật khẩu 2 bước | công khai |
+| `/bt2/video` | video của tôi, 6/trang (`?page=2`, `?keyword=`) | đăng nhập |
+| `/bt2/video/add` · `/video/edit?id=` · `/video/delete?id=` | CRUD video | chủ sở hữu |
+| `/bt2/video/detail?id=` | xem + play | công khai |
+| `/bt2/admin/categories` (+ add/edit/delete) | CRUD Category | **admin** |
+| `/bt2/image?fname=` · `/bt2/media?fname=` | phục vụ ảnh / video đã upload (hỗ trợ HTTP Range) | công khai |
+
+File upload lưu ở `C:\Users\<user>\ltweb-uploads` (đổi bằng `-Dltweb.upload.dir=...`),
+**ngoài** thư mục webapps để không mất khi deploy lại.
 
 ---
 
-## 4. Các URL
-
-| URL | Chức năng |
-|---|---|
-| `http://localhost:8080/bt2/` | Tự chuyển sang trang danh sách |
-| `/bt2/admin/categories` | Danh sách + phân trang + tìm kiếm (`?page=2`, `?keyword=laptop`) |
-| `/bt2/admin/category/add` | Form thêm mới |
-| `/bt2/admin/category/insert` | (POST) Thêm vào DB |
-| `/bt2/admin/category/edit?id=1` | Form sửa |
-| `/bt2/admin/category/update` | (POST) Cập nhật |
-| `/bt2/admin/category/delete?id=1` | Xóa |
-| `/bt2/image?fname=xxx.png` | Trả về file ảnh đã upload |
-
-Ảnh upload được lưu ở `C:\Users\<user>\ltweb-uploads` (đổi được bằng `-Dltweb.upload.dir=...`).
-Lưu **ngoài** thư mục webapps để không bị mất khi deploy lại.
-
----
-
-## 5. Cấu trúc
+## 6. Cấu trúc
 
 ```
-BT2/
-├── pom.xml
-├── run.bat / stop.bat
-├── database/init.sql
-└── src/main/
-    ├── java/vn/edu/hcmute/
-    │   ├── entity/      Category.java, Video.java        (JPA entity + @NamedQuery)
-    │   ├── config/      JpaConfig.java                    (EntityManagerFactory)
-    │   │                AppContextListener.java           (đóng EMF khi shutdown)
-    │   │                TestJpa.java                      (bước 5: test không cần web)
-    │   ├── dao/         ICategoryDao.java, CategoryDao.java
-    │   ├── service/     ICategoryService.java, CategoryServiceImpl.java
-    │   ├── controller/  CategoryController.java, ImageServlet.java, IndexServlet.java
-    │   └── util/        Constants.java
-    ├── resources/META-INF/persistence.xml
-    └── webapp/
-        ├── css/style.css
-        ├── index.jsp
-        ├── WEB-INF/web.xml
-        └── views/
-            ├── admin/category-list.jsp, category-add.jsp, category-edit.jsp
-            └── error.jsp
+BT2/src/main/
+├── java/vn/edu/hcmute/
+│   ├── entity/      User, Category, Video          (@Entity, @NamedQuery, quan hệ 1-n)
+│   ├── config/      JpaConfig, AppContextListener, TestJpa
+│   ├── dao/         IUserDao/UserDao, ICategoryDao/CategoryDao, IVideoDao/VideoDao
+│   ├── service/     UserServiceImpl, CategoryServiceImpl, VideoServiceImpl, MailService
+│   ├── controller/  HomeServlet, VideoServlet, CategoryController, ImageServlet, IndexServlet
+│   │   └── auth/    Login, Logout, Register, Verify, Forgot, Reset
+│   ├── filter/      AuthFilter        (chặn /admin/* và /video*)
+│   └── util/        PasswordUtil, OtpUtil, UploadUtil, Flash, Constants
+├── resources/       META-INF/persistence.xml, mail.properties
+└── webapp/
+    ├── css/style.css
+    ├── index.jsp
+    ├── WEB-INF/web.xml
+    └── views/
+        ├── inc/      head.jspf, foot.jspf      (layout dùng chung)
+        ├── auth/     login, register, verify, forgot, reset
+        ├── video/    list, add, edit, detail
+        ├── admin/    category-list, category-add, category-edit
+        ├── home.jsp
+        └── error.jsp
 ```
 
-Luồng gọi: **Servlet → Service → DAO → EntityManager**. Controller không gọi thẳng DAO.
+---
+
+## 7. Kiến thức trọng tâm (dễ bị hỏi khi bảo vệ)
+
+**Hash mật khẩu bằng BCrypt** — `PasswordUtil.hash()` sinh chuỗi `$2a$10$...`,
+DB **không bao giờ** lưu mật khẩu gốc. BCrypt có salt ngẫu nhiên nhúng trong hash
+(2 người cùng mật khẩu → 2 hash khác nhau) và có cost 10 (~2¹⁰ vòng lặp) nên rất
+chậm khi brute-force. Kiểm tra bằng `BCrypt.checkpw()`, không thể "giải mã".
+
+**OTP** — 6 chữ số sinh bằng `SecureRandom` (không dùng `Random` vì có thể đoán trạng thái
+tiếp theo), lưu vào `users.Otp` + `users.OtpExpiry`, hết hạn sau **5 phút**, dùng xong xoá.
+
+**Kích hoạt tài khoản** — đăng ký tạo user với `Status = 0`. Chỉ khi nhập đúng OTP mới
+đổi `Status = 1`. `login()` chặn tài khoản `Status = 0` (chưa kích hoạt) và `-1` (bị khoá).
+
+**Session fixation** — sau khi đăng nhập thành công, `LoginServlet` **huỷ session cũ** rồi
+tạo session mới trước khi gắn `user` vào. Nếu dùng lại session cũ, kẻ tấn công đã biết
+JSESSIONID trước đó sẽ chiếm được phiên.
+
+**AuthFilter** — `@WebFilter("/admin/*", "/video", "/video/*")`: chưa đăng nhập thì lưu
+trang đang muốn vào rồi redirect `/login`; không phải admin thì chặn `/admin/*`.
+
+**Phân quyền dữ liệu** — mỗi video có `user_id`; sửa/xoá video phải kiểm tra
+`video.user.userid == session.user.userid` (xem `VideoServlet.canEdit`), không chỉ ẩn nút trên UI.
+
+**Quan hệ 1-n** — `User` có `@OneToMany(mappedBy = "user")`, `Video` có
+`@ManyToOne @JoinColumn(name = "UserId", nullable = false)`. `mappedBy` = "khoá ngoại do
+phía Video quản lý"; thiếu nó Hibernate tự sinh thêm bảng trung gian.
+
+**Upload Multipart** — form `enctype="multipart/form-data"` + servlet `@MultipartConfig`;
+`Part.write(path)` lưu file, `getSubmittedFileName()` lấy tên gốc. Tên file được đổi thành
+`timestamp+random.ext` để không ghi đè. Chỉ nhận đúng phần mở rộng cho phép.
+
+**Phục vụ file ngoài webapp** — file upload nằm ngoài WAR nên không truy cập trực tiếp được;
+`/media?fname=` đọc file và trả về, có kiểm tra `..`/`/` để chặn path traversal, và hỗ trợ
+header `Range` (HTTP 206) để video **tua được**.
+
+**`hbm2ddl.auto=update`** — Hibernate tự tạo/cập nhật bảng theo entity, không xoá dữ liệu.
 
 ---
 
-## 6. Kiến thức trọng tâm khi bảo vệ bài
-
-**`@NamedQuery`** — câu JPQL đặt tên sẵn ở đầu entity, gọi bằng
-`enma.createNamedQuery("Category.findAll", Category.class)`. Ưu điểm: JPQL được kiểm tra
-lúc khởi động, không phải viết lại chuỗi mỗi lần dùng.
-
-**`@GeneratedValue(strategy = IDENTITY)`** — khóa chính do cột `IDENTITY` của SQL Server sinh ra,
-Hibernate không cần bảng sequence riêng.
-
-**Quan hệ 1-n hai chiều** — `Category` có `@OneToMany(mappedBy = "category")`,
-`Video` có `@ManyToOne @JoinColumn(name = "CategoryId")`. `mappedBy` nghĩa là
-"khóa ngoại do phía `Video` quản lý". Thiếu `mappedBy` Hibernate sẽ tự tạo **thêm một bảng trung gian** — sai yêu cầu.
-
-**Transaction** — mọi thao tác ghi đều `begin() → persist/merge/remove → commit()`,
-có `rollback()` trong `catch` và `close()` trong `finally`.
-
-**Multipart** — form phải có `enctype="multipart/form-data"` và servlet phải có
-`@MultipartConfig`, nếu không `req.getPart(...)` sẽ trả `null`.
-
-**JSTL** — `<%@ taglib prefix="c" uri="jakarta.tags.core" %>`. Dùng
-`http://java.sun.com/jsp/jstl/core` sẽ ra lỗi `absolute uri cannot be resolved`.
-
----
-
-## 7. Những chỗ khác với hướng dẫn (và lý do)
-
-Mình giữ nguyên kiến trúc và tên phương thức của hướng dẫn, chỉ sửa các lỗi sẽ làm bài **không chạy được**:
+## 8. Những chỗ khác với hướng dẫn (và lý do)
 
 | Trong hướng dẫn | Trong bài này | Lý do |
 |---|---|---|
-| `JpaConfig` tạo `EntityManagerFactory` mỗi lần gọi | Singleton, tạo 1 lần | EMF rất nặng; tạo mỗi request sẽ rò rỉ connection, vài chục request là SQL Server báo `too many connections` |
-| `searchByName`: `WHERE c.catename LIKE ...` | `WHERE c.categoryname LIKE ...` | `catename` không phải tên field → `IllegalArgumentException` |
-| `findByCategoryname` dùng `getSingleResult()` rồi kiểm tra `== null` | dùng `getResultList()`, rỗng thì trả `null` | `getSingleResult()` ném `NoResultException` khi không tìm thấy, không bao giờ trả `null` |
-| `@Data` trên cả 2 entity có quan hệ 2 chiều | thêm `@ToString.Exclude`, `@EqualsAndHashCode.Exclude` | `toString()`/`hashCode()` sinh ra sẽ gọi vòng Category ↔ Video → `StackOverflowError` |
-| Insert trùng tên thì im lặng bỏ qua | báo lỗi "Tên danh mục đã tồn tại" | Người dùng không biết tại sao bấm Insert mà không có gì xảy ra |
-| Không kiểm tra `images` rỗng | có fallback `avatar.png` + kiểm tra định dạng file | Tránh `NullPointerException` và chặn upload file không phải ảnh |
-| JSP gọi `cate.images.substring(0,5)` | dùng `fn:startsWith` | Nếu `images` null hoặc ngắn hơn 5 ký tự → lỗi EL |
-| Thiếu servlet `/image` | có `ImageServlet` | JSP trỏ tới `/image?fname=...` nhưng hướng dẫn không viết servlet này |
-
-Phần **thêm** so với yêu cầu: phân trang (dùng `findAll(page, size)` + `count()`),
-tìm kiếm theo tên, thông báo flash, trang lỗi thân thiện, chặn path traversal ở `ImageServlet`.
+| `JpaConfig` tạo `EntityManagerFactory` mỗi lần gọi | singleton, tạo 1 lần | EMF rất nặng; tạo mỗi request sẽ rò rỉ connection |
+| `searchByName`: `WHERE c.catename` | `c.categoryname` | sai tên field → lỗi JPQL |
+| `getSingleResult()` rồi so `== null` | `getResultList()`, rỗng trả `null` | `getSingleResult` ném `NoResultException`, không trả null |
+| `@Data` trên 2 entity có quan hệ 2 chiều | thêm `@ToString.Exclude`, `@EqualsAndHashCode.Exclude` | tránh `StackOverflowError` do toString đệ quy |
+| JSP `images.substring(0,5)` | `fn:startsWith` | null hoặc chuỗi < 5 ký tự → lỗi EL |
+| Thiếu servlet `/image` | có `ImageServlet` (`/image`, `/media`) | JSP trỏ `/image?fname=` nhưng hướng dẫn không viết servlet |
+| Chỉ CRUD Category | thêm tầng User + Auth + Video | theo yêu cầu bài tập mới |
 
 ---
 
-## 8. Lỗi thường gặp
+## 9. Lỗi thường gặp
 
-| Lỗi | Nguyên nhân / Cách sửa |
+| Lỗi | Cách sửa |
 |---|---|
-| `The TCP/IP connection to the host localhost, port 1433 has failed` | SQL Server chưa chạy, hoặc chưa bật TCP/IP |
+| `The TCP/IP connection to the host localhost, port 1433 has failed` | SQL Server chưa chạy / chưa bật TCP/IP |
 | `Cannot open database "webst2"` | Chưa chạy `database/init.sql` |
 | `Login failed for user 'sa'` | Sai mật khẩu trong `persistence.xml`, hoặc `sa` bị disable |
-| `ClassNotFoundException: com.microsoft.sqlserver.jdbc.SQLServerDriver` | Thiếu dependency `mssql-jdbc` trong `pom.xml` |
-| `Unknown persistence unit` | Tên unit trong `JpaConfig` khác tên trong `persistence.xml` |
-| `No Persistence provider for EntityManager` | Thiếu `hibernate-core`, hoặc `persistence.xml` sai vị trí (phải ở `META-INF/`) |
-| Ảnh không hiện | Kiểm tra thư mục `ltweb-uploads` có file chưa, và Tomcat có quyền đọc |
-| Tiếng Việt bị `?` | `web.xml` đã set UTF-8; nếu vẫn lỗi thì kiểm tra collation của cột là `nvarchar` |
+| Đăng ký xong không nhận được mail | Chưa điền `mail.properties` → xem OTP ở console Tomcat; hoặc Gmail chặn (phải dùng App Password) |
+| `Authentication failed` khi gửi mail | Dùng mật khẩu Gmail thường thay vì App Password |
+| Tiếng Việt trong `.jspf` bị `Trang chá»§` | `web.xml` đã khai báo `<jsp-property-group>` `*.jspf` → `UTF-8`; nếu tự thêm file `.jspf` mới thì kiểm tra lại khối này |
+| Video không play | Link YouTube phải là video công khai; file upload phải là `mp4/webm/ogg` mà trình duyệt hỗ trợ |
+| Ảnh/video không hiện | Kiểm tra thư mục `ltweb-uploads` và quyền đọc của Tomcat |

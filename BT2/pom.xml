@@ -77,6 +77,25 @@
             <version>12.10.0.jre11</version>
         </dependency>
 
+        <!-- ===== Gui email OTP (Jakarta Mail) ===== -->
+        <dependency>
+            <groupId>jakarta.mail</groupId>
+            <artifactId>jakarta.mail-api</artifactId>
+            <version>2.1.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.angus</groupId>
+            <artifactId>angus-mail</artifactId>
+            <version>2.0.5</version>
+        </dependency>
+
+        <!-- ===== Bam mat khau bang BCrypt ===== -->
+        <dependency>
+            <groupId>org.mindrot</groupId>
+            <artifactId>jbcrypt</artifactId>
+            <version>0.4</version>
+        </dependency>
+
         <!-- ===== Lombok (@Data, @NoArgsConstructor, @AllArgsConstructor) ===== -->
         <dependency>
             <groupId>org.projectlombok</groupId>

@@ -13,6 +13,7 @@
         <!-- Khai bao tuong minh cac entity (khong phu thuoc viec scan classpath) -->
         <class>vn.edu.hcmute.entity.Category</class>
         <class>vn.edu.hcmute.entity.Video</class>
+        <class>vn.edu.hcmute.entity.User</class>
 
         <properties>
             <property name="jakarta.persistence.jdbc.driver"

@@ -8,7 +8,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-/** Vao http://localhost:8080/bt2/ -> nhay thang vao trang quan ly category. */
+/** Vao http://localhost:8080/bt2/ -> nhay ve trang chu. */
 @WebServlet(urlPatterns = { "", "/index" })
 public class IndexServlet extends HttpServlet {
 
@@ -16,6 +16,6 @@ public class IndexServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.sendRedirect(req.getContextPath() + "/admin/categories");
+        resp.sendRedirect(req.getContextPath() + "/home");
     }
 }
