@@ -1,0 +1,27 @@
+# ===== Java / Maven =====
+target/
+*.war
+*.class
+*.jar
+!lib/*.jar
+
+# ===== IDE =====
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# ===== He dieu hanh =====
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ===== Log / upload tam =====
+*.log
+uploads/
+
+# ===== WorkBuddy tooling state =====
+.workbuddy-ai/
