@@ -19,6 +19,8 @@ public final class UploadUtil {
     public static final Set<String> IMAGE_EXT = Set.of("jpg", "jpeg", "png", "gif", "webp", "bmp");
     public static final Set<String> VIDEO_EXT = Set.of("mp4", "webm", "ogg", "ogv", "mov", "m4v");
 
+    public static final long IMAGE_MAX_BYTES = 5L * 1024 * 1024;
+
     private UploadUtil() {
     }
 
@@ -31,6 +33,9 @@ public final class UploadUtil {
     public static String save(Part part, Set<String> allowed, String label) throws IOException, ServletException {
         if (part == null || part.getSize() == 0) {
             return null;
+        }
+        if (allowed == IMAGE_EXT && part.getSize() > IMAGE_MAX_BYTES) {
+            throw new IllegalArgumentException(label + " không được vượt quá 5 MB");
         }
         String submitted = part.getSubmittedFileName();
         if (submitted == null || submitted.isBlank()) {
@@ -58,7 +63,7 @@ public final class UploadUtil {
 
     /** Xoa file upload cu (bo qua loi de khong lam hong thao tac update). */
     public static void deleteQuietly(String fname) {
-        if (fname == null || fname.isBlank() || fname.startsWith("http")) {
+        if (fname == null || !fname.matches("[0-9]{13,16}\\\\.[a-z0-9]{3,4}")) {
             return;
         }
         try {

@@ -58,15 +58,15 @@
                                 <c:choose>
                                     <c:when test="${empty cate.images}">
                                         <c:url value="/image?fname=avatar.png" var="imgUrl" />
-                                        <img class="thumb" src="${imgUrl}" alt="no image">
+                                        <img class="thumb" src="${fn:escapeXml(imgUrl)}" alt="no image">
                                     </c:when>
                                     <c:when test="${fn:startsWith(cate.images, 'http')}">
                                         <c:url value="${cate.images}" var="imgUrl" />
-                                        <img class="thumb" src="${imgUrl}" alt="${fn:escapeXml(cate.categoryname)}">
+                                        <img class="thumb" src="${fn:escapeXml(imgUrl)}" alt="${fn:escapeXml(cate.categoryname)}">
                                     </c:when>
                                     <c:otherwise>
                                         <c:url value="/image?fname=${cate.images}" var="imgUrl" />
-                                        <img class="thumb" src="${imgUrl}" alt="${fn:escapeXml(cate.categoryname)}">
+                                        <img class="thumb" src="${fn:escapeXml(imgUrl)}" alt="${fn:escapeXml(cate.categoryname)}">
                                     </c:otherwise>
                                 </c:choose>
                             </td>
@@ -92,7 +92,7 @@
                                    href="${ctx}/admin/category/edit?id=${cate.categoryid}">Sửa</a>
                                 <a class="btn btn-danger btn-sm"
                                    href="${ctx}/admin/category/delete?id=${cate.categoryid}"
-                                   onclick="return confirm('Xóa danh mục &quot;${fn:escapeXml(cate.categoryname)}&quot; ?');">Xóa</a>
+                                   onclick="return confirm('Xóa danh mục này?');">Xóa</a>
                             </td>
                         </tr>
                     </c:forEach>

@@ -5,6 +5,7 @@ import java.util.List;
 import vn.edu.hcmute.dao.IVideoDao;
 import vn.edu.hcmute.dao.VideoDao;
 import vn.edu.hcmute.entity.Video;
+import vn.edu.hcmute.util.FormValidation;
 
 public class VideoServiceImpl implements IVideoService {
 
@@ -37,9 +38,7 @@ public class VideoServiceImpl implements IVideoService {
 
     @Override
     public void insert(Video video) {
-        if (video.getTitle() == null || video.getTitle().isBlank()) {
-            throw new IllegalArgumentException("Tiêu đề video không được để trống");
-        }
+        validate(video);
         if (video.getUser() == null) {
             throw new IllegalArgumentException("Video phải thuộc về một user");
         }
@@ -48,10 +47,16 @@ public class VideoServiceImpl implements IVideoService {
 
     @Override
     public void update(Video video) {
-        if (video.getTitle() == null || video.getTitle().isBlank()) {
-            throw new IllegalArgumentException("Tiêu đề video không được để trống");
-        }
+        validate(video);
         videoDao.update(video);
+    }
+
+    private void validate(Video video) {
+        video.setTitle(FormValidation.required(video.getTitle(), "Tiêu đề video", 200));
+        video.setDescription(FormValidation.optional(video.getDescription(), "Mô tả", 500));
+        if (video.getActive() != 0 && video.getActive() != 1) {
+            throw new IllegalArgumentException("Trạng thái không hợp lệ");
+        }
     }
 
     @Override

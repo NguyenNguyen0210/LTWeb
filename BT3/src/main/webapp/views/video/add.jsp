@@ -18,7 +18,7 @@
 
     <div class="card-body">
         <c:if test="${not empty error}">
-            <div class="alert alert-error">${fn:escapeXml(error)}</div>
+            <div class="alert alert-error" role="alert">${fn:escapeXml(error)}</div>
         </c:if>
 
         <form action="${ctx}/video/insert" method="post" enctype="multipart/form-data">
@@ -37,8 +37,8 @@
 
             <div class="field">
                 <label for="videoUrl">Link video (YouTube hoặc .mp4)</label>
-                <input type="text" id="videoUrl" name="videoUrl"
-                       value="${fn:escapeXml(video.videoUrl)}"
+                <input type="text" id="videoUrl" name="videoUrl" maxlength="500"
+                       value="${fn:escapeXml(submittedVideoUrl != null ? submittedVideoUrl : video.videoUrl)}"
                        placeholder="https://www.youtube.com/watch?v=... hoặc https://.../video.mp4">
             </div>
 
@@ -50,7 +50,7 @@
 
             <div class="field">
                 <label for="poster">Link ảnh poster</label>
-                <input type="text" id="poster" name="poster" value="${fn:escapeXml(video.poster)}"
+                <input type="text" id="poster" name="poster" maxlength="500" value="${fn:escapeXml(submittedPoster != null ? submittedPoster : video.poster)}"
                        placeholder="https://... (có thể bỏ trống)">
             </div>
 

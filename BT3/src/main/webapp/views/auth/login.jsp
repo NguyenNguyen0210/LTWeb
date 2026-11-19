@@ -13,19 +13,19 @@
         <p class="sub">Dùng email và mật khẩu đã đăng ký</p>
 
         <c:if test="${not empty error}">
-            <div class="alert alert-error">${fn:escapeXml(error)}</div>
+            <div class="alert alert-error" role="alert">${fn:escapeXml(error)}</div>
         </c:if>
 
         <form method="post" action="${ctx}/login">
             <div class="field">
                 <label for="email">Email</label>
-                <input type="text" id="email" name="email" value="${fn:escapeXml(email)}"
+                <input type="email" id="email" name="email" maxlength="100" value="${fn:escapeXml(email)}"
                        placeholder="you@example.com" autocomplete="username" required>
             </div>
 
             <div class="field">
                 <label for="password">Mật khẩu</label>
-                <input type="password" id="password" name="password"
+                <input type="password" id="password" name="password" maxlength="72"
                        placeholder="••••••" autocomplete="current-password" required>
             </div>
 

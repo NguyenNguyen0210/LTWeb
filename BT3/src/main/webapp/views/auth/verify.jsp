@@ -16,7 +16,7 @@
         </p>
 
         <c:if test="${not empty error}">
-            <div class="alert alert-error">${fn:escapeXml(error)}</div>
+            <div class="alert alert-error" role="alert">${fn:escapeXml(error)}</div>
         </c:if>
 
         <c:if test="${not mailConfigured}">
@@ -32,7 +32,7 @@
 
             <div class="field">
                 <label for="otp">Mã xác nhận</label>
-                <input type="text" id="otp" name="otp" class="otp-input"
+                <input type="text" id="otp" name="otp" class="otp-input" autocomplete="one-time-code"
                        inputmode="numeric" maxlength="6" pattern="[0-9]{6}"
                        placeholder="000000" autofocus required>
                 <div class="hint">Mã có hiệu lực 5 phút.</div>

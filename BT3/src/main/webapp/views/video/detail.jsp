@@ -8,7 +8,7 @@
 <body>
 
 <c:if test="${not empty error}">
-    <div class="alert alert-error">${fn:escapeXml(error)}</div>
+    <div class="alert alert-error" role="alert">${fn:escapeXml(error)}</div>
 </c:if>
 
 <div class="card">
@@ -16,20 +16,20 @@
         <div class="player">
             <c:choose>
                 <c:when test="${video.youtube}">
-                    <iframe src="${video.youtubeEmbedUrl}"
+                    <iframe src="${fn:escapeXml(video.youtubeEmbedUrl)}"
                             title="${fn:escapeXml(video.title)}"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowfullscreen></iframe>
                 </c:when>
                 <c:when test="${video.external}">
-                    <video controls preload="metadata" poster="${video.posterUrl ? video.poster : ''}">
-                        <source src="${video.videoUrl}">
+                    <video controls preload="metadata" poster="${video.posterUrl ? fn:escapeXml(video.poster) : ''}">
+                        <source src="${fn:escapeXml(video.videoUrl)}">
                         Trình duyệt không hỗ trợ thẻ video.
                     </video>
                 </c:when>
                 <c:when test="${video.uploaded}">
                     <video controls preload="metadata">
-                        <source src="${ctx}/media?fname=${video.videoUrl}">
+                        <source src="${ctx}/media?fname=${fn:escapeXml(video.videoUrl)}">
                         Trình duyệt không hỗ trợ thẻ video.
                     </video>
                 </c:when>
@@ -69,7 +69,7 @@
             <c:if test="${canEdit}">
                 <a class="btn btn-primary" href="${ctx}/video/edit?id=${video.videoId}">Sửa video</a>
                 <a class="btn btn-danger" href="${ctx}/video/delete?id=${video.videoId}"
-                   onclick="return confirm('Xóa video này ?');">Xóa video</a>
+                   onclick="return confirm('Xóa video này?');">Xóa video</a>
             </c:if>
         </div>
     </div>

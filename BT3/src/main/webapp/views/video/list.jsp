@@ -51,10 +51,10 @@
                                         <div class="poster poster-empty">▶</div>
                                     </c:when>
                                     <c:when test="${v.posterUrl}">
-                                        <img class="poster" src="${v.poster}" alt="${fn:escapeXml(v.title)}">
+                                        <img class="poster" src="${fn:escapeXml(v.poster)}" alt="${fn:escapeXml(v.title)}">
                                     </c:when>
                                     <c:otherwise>
-                                        <img class="poster" src="${ctx}/media?fname=${v.poster}"
+                                        <img class="poster" src="${ctx}/media?fname=${fn:escapeXml(v.poster)}"
                                              alt="${fn:escapeXml(v.title)}">
                                     </c:otherwise>
                                 </c:choose>
@@ -72,7 +72,7 @@
                                     <a class="btn btn-light btn-sm" href="${ctx}/video/edit?id=${v.videoId}">Sửa</a>
                                     <a class="btn btn-danger btn-sm"
                                        href="${ctx}/video/delete?id=${v.videoId}"
-                                       onclick="return confirm('Xóa video &quot;${fn:escapeXml(v.title)}&quot; ?');">Xóa</a>
+                                       onclick="return confirm('Xóa video này?');">Xóa</a>
                                 </div>
                             </div>
                         </article>

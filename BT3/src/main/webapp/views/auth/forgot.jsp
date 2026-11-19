@@ -13,13 +13,13 @@
         <p class="sub">Nhập email đã đăng ký, hệ thống sẽ gửi mã xác nhận OTP</p>
 
         <c:if test="${not empty error}">
-            <div class="alert alert-error">${fn:escapeXml(error)}</div>
+            <div class="alert alert-error" role="alert">${fn:escapeXml(error)}</div>
         </c:if>
 
         <form method="post" action="${ctx}/forgot">
             <div class="field">
                 <label for="email">Email</label>
-                <input type="text" id="email" name="email" value="${fn:escapeXml(email)}"
+                <input type="email" id="email" name="email" maxlength="100" value="${fn:escapeXml(email)}"
                        placeholder="you@example.com" autocomplete="email" required>
             </div>
 

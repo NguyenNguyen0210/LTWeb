@@ -17,7 +17,7 @@
 
         <div class="card-body">
             <c:if test="${not empty error}">
-                <div class="alert alert-error">${fn:escapeXml(error)}</div>
+                <div class="alert alert-error" role="alert">${fn:escapeXml(error)}</div>
             </c:if>
 
             <form action="${ctx}/admin/category/update" method="post" enctype="multipart/form-data">
@@ -26,12 +26,12 @@
                 <div class="field">
                     <label for="categoryname">Category name</label>
                     <input type="text" id="categoryname" name="categoryname" maxlength="50"
-                           value="${fn:escapeXml(cate.categoryname)}" required>
+                           value="${fn:escapeXml(categoryname != null ? categoryname : cate.categoryname)}" required>
                 </div>
 
                 <div class="field">
                     <label for="images">Link images</label>
-                    <input type="text" id="images" name="images" value="${fn:escapeXml(cate.images)}">
+                    <input type="text" id="images" name="images" maxlength="500" value="${fn:escapeXml(images != null ? images : cate.images)}">
                     <div class="hint">Sửa link trực tiếp, hoặc upload file mới ở ô bên dưới.</div>
                 </div>
 
@@ -40,15 +40,15 @@
                     <c:choose>
                         <c:when test="${empty cate.images}">
                             <c:url value="/image?fname=avatar.png" var="imgUrl" />
-                            <img class="thumb-lg" src="${imgUrl}" alt="no image">
+                            <img class="thumb-lg" src="${fn:escapeXml(imgUrl)}" alt="no image">
                         </c:when>
                         <c:when test="${fn:startsWith(cate.images, 'http')}">
                             <c:url value="${cate.images}" var="imgUrl" />
-                            <img class="thumb-lg" src="${imgUrl}" alt="${fn:escapeXml(cate.categoryname)}">
+                            <img class="thumb-lg" src="${fn:escapeXml(imgUrl)}" alt="${fn:escapeXml(cate.categoryname)}">
                         </c:when>
                         <c:otherwise>
                             <c:url value="/image?fname=${cate.images}" var="imgUrl" />
-                            <img class="thumb-lg" src="${imgUrl}" alt="${fn:escapeXml(cate.categoryname)}">
+                            <img class="thumb-lg" src="${fn:escapeXml(imgUrl)}" alt="${fn:escapeXml(cate.categoryname)}">
                         </c:otherwise>
                     </c:choose>
                 </div>

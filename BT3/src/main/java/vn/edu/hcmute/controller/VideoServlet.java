@@ -3,6 +3,7 @@ package vn.edu.hcmute.controller;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -20,6 +21,7 @@ import vn.edu.hcmute.service.IVideoService;
 import vn.edu.hcmute.service.VideoServiceImpl;
 import vn.edu.hcmute.util.Constants;
 import vn.edu.hcmute.util.Flash;
+import vn.edu.hcmute.util.FormValidation;
 import vn.edu.hcmute.util.UploadUtil;
 
 /**
@@ -82,9 +84,9 @@ public class VideoServlet extends HttpServlet {
                 Flash.error(req, "Bạn không có quyền xóa video này");
             } else {
                 try {
+                    videoService.delete(video.getVideoId());
                     UploadUtil.deleteQuietly(video.getPoster());
                     UploadUtil.deleteQuietly(video.getVideoUrl());
-                    videoService.delete(video.getVideoId());
                     Flash.success(req, "Đã xóa video \"" + video.getTitle() + "\"");
                 } catch (Exception e) {
                     Flash.error(req, "Không xóa được video: " + e.getMessage());
@@ -101,10 +103,16 @@ public class VideoServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String url = req.getRequestURI();
-        if (url.endsWith("/video/insert")) {
-            handleInsert(req, resp);
-        } else if (url.endsWith("/video/update")) {
-            handleUpdate(req, resp);
+        try {
+            if (url.endsWith("/video/insert")) {
+                handleInsert(req, resp);
+            } else if (url.endsWith("/video/update")) {
+                handleUpdate(req, resp);
+            } else {
+                resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+            }
+        } catch (IllegalStateException e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Tệp video không được vượt quá 100 MB");
         }
     }
 
@@ -161,110 +169,82 @@ public class VideoServlet extends HttpServlet {
     }
 
     private void handleInsert(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        User user = currentUser(req);
-        String title = trim(req.getParameter("title"));
-
-        if (title == null) {
-            forwardForm(req, resp, "/views/video/add.jsp", "Tiêu đề video không được để trống", null);
-            return;
-        }
-
         Video video = new Video();
         video.setVideoId(generateId());
-        video.setTitle(title);
-        video.setDescription(trim(req.getParameter("description")));
-        video.setActive(parseIntOr(req.getParameter("active"), 1));
-        video.setViews(0);
+        video.setActive(1);
         video.setCreatedAt(LocalDateTime.now());
-        video.setUser(user);
-        video.setCategory(findCategory(req.getParameter("categoryId")));
-
-        try {
-            String videoFile = UploadUtil.save(req.getPart("videoFile"), UploadUtil.VIDEO_EXT, "File video");
-            String posterFile = UploadUtil.save(req.getPart("posterFile"), UploadUtil.IMAGE_EXT, "Ảnh poster");
-
-            if (videoFile != null) {
-                video.setVideoUrl(videoFile);
-            } else {
-                video.setVideoUrl(trim(req.getParameter("videoUrl")));
-            }
-
-            if (posterFile != null) {
-                video.setPoster(posterFile);
-            } else {
-                video.setPoster(trim(req.getParameter("poster")));
-            }
-
-            videoService.insert(video);
-            Flash.success(req, "Đã thêm video \"" + title + "\"");
-            resp.sendRedirect(req.getContextPath() + "/video");
-
-        } catch (IllegalArgumentException e) {
-            forwardForm(req, resp, "/views/video/add.jsp", e.getMessage(), video);
-        } catch (Exception e) {
-            e.printStackTrace();
-            forwardForm(req, resp, "/views/video/add.jsp", "Lỗi khi thêm video: " + e.getMessage(), video);
-        }
+        video.setUser(currentUser(req));
+        save(req, resp, video, false);
     }
 
     private void handleUpdate(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        User user = currentUser(req);
         Video video = videoService.findById(req.getParameter("videoId"));
-
-        if (video == null) {
-            Flash.error(req, "Không tìm thấy video");
+        if (video == null || !canEdit(video, currentUser(req))) {
+            Flash.error(req, video == null ? "Không tìm thấy video" : "Bạn không có quyền sửa video này");
             resp.sendRedirect(req.getContextPath() + "/video");
             return;
         }
-        if (!canEdit(video, user)) {
-            Flash.error(req, "Bạn không có quyền sửa video này");
-            resp.sendRedirect(req.getContextPath() + "/video");
-            return;
-        }
+        save(req, resp, video, true);
+    }
 
-        String title = trim(req.getParameter("title"));
-        if (title == null) {
-            forwardForm(req, resp, "/views/video/edit.jsp", "Tiêu đề video không được để trống", video);
-            return;
-        }
-
-        String oldPoster = video.getPoster();
+    private void save(HttpServletRequest req, HttpServletResponse resp, Video video, boolean editing)
+            throws ServletException, IOException {
+        String view = editing ? "/views/video/edit.jsp" : "/views/video/add.jsp";
         String oldVideo = video.getVideoUrl();
-
-        video.setTitle(title);
-        video.setDescription(trim(req.getParameter("description")));
-        video.setActive(parseIntOr(req.getParameter("active"), video.getActive()));
-        video.setCategory(findCategory(req.getParameter("categoryId")));
+        String oldPoster = video.getPoster();
+        String videoLink = req.getParameter("videoUrl");
+        String posterLink = req.getParameter("poster");
+        String videoFile = null;
+        String posterFile = null;
+        video.setTitle(req.getParameter("title"));
+        video.setDescription(req.getParameter("description"));
 
         try {
-            String videoFile = UploadUtil.save(req.getPart("videoFile"), UploadUtil.VIDEO_EXT, "File video");
-            String posterFile = UploadUtil.save(req.getPart("posterFile"), UploadUtil.IMAGE_EXT, "Ảnh poster");
+            video.setTitle(FormValidation.required(video.getTitle(), "Tiêu đề video", 200));
+            video.setDescription(FormValidation.optional(video.getDescription(), "Mô tả", 500));
+            video.setActive(FormValidation.state(req.getParameter("active"), video.getActive()));
+            video.setCategory(findCategory(req.getParameter("categoryId")));
 
-            if (videoFile != null) {
-                UploadUtil.deleteQuietly(oldVideo);
-                video.setVideoUrl(videoFile);
+            videoFile = UploadUtil.save(req.getPart("videoFile"), UploadUtil.VIDEO_EXT, "File video");
+            posterFile = UploadUtil.save(req.getPart("posterFile"), UploadUtil.IMAGE_EXT, "Ảnh poster");
+            video.setVideoUrl(videoFile != null ? videoFile : FormValidation.mediaLink(videoLink, oldVideo, "Link video"));
+            video.setPoster(posterFile != null ? posterFile : FormValidation.mediaLink(posterLink, oldPoster, "Link poster"));
+
+            if (editing) {
+                videoService.update(video);
             } else {
-                String urlParam = trim(req.getParameter("videoUrl"));
-                video.setVideoUrl(urlParam);
+                videoService.insert(video);
             }
-
-            if (posterFile != null) {
-                UploadUtil.deleteQuietly(oldPoster);
-                video.setPoster(posterFile);
-            } else {
-                video.setPoster(trim(req.getParameter("poster")));
-            }
-
-            videoService.update(video);
-            Flash.success(req, "Đã cập nhật video \"" + title + "\"");
-            resp.sendRedirect(req.getContextPath() + "/video/detail?id=" + video.getVideoId());
-
         } catch (IllegalArgumentException e) {
-            forwardForm(req, resp, "/views/video/edit.jsp", e.getMessage(), video);
+            invalidForm(req, resp, video, view, videoFile, posterFile, videoLink, posterLink, oldVideo, oldPoster, e.getMessage());
+            return;
         } catch (Exception e) {
-            e.printStackTrace();
-            forwardForm(req, resp, "/views/video/edit.jsp", "Lỗi khi cập nhật: " + e.getMessage(), video);
+            log("Không lưu được video", e);
+            invalidForm(req, resp, video, view, videoFile, posterFile, videoLink, posterLink, oldVideo, oldPoster,
+                    "Không thể lưu video. Hãy kiểm tra kích thước tệp và thử lại.");
+            return;
         }
+
+        if (!Objects.equals(oldVideo, video.getVideoUrl())) {
+            UploadUtil.deleteQuietly(oldVideo);
+        }
+        if (!Objects.equals(oldPoster, video.getPoster())) {
+            UploadUtil.deleteQuietly(oldPoster);
+        }
+        Flash.success(req, editing ? "Đã cập nhật video" : "Đã thêm video");
+        resp.sendRedirect(req.getContextPath() + (editing ? "/video/detail?id=" + video.getVideoId() : "/video"));
+    }
+
+    private void invalidForm(HttpServletRequest req, HttpServletResponse resp, Video video, String view,
+                             String videoFile, String posterFile, String videoLink, String posterLink,
+                             String oldVideo, String oldPoster, String error) throws ServletException, IOException {
+        UploadUtil.deleteQuietly(videoFile);
+        UploadUtil.deleteQuietly(posterFile);
+        video.setVideoUrl(oldVideo);
+        video.setPoster(oldPoster);
+        req.setAttribute("submittedVideoUrl", videoLink);
+        req.setAttribute("submittedPoster", posterLink);
+        forwardForm(req, resp, view, error, video);
     }
 
     // ===================== TIEN ICH =====================
@@ -280,8 +260,15 @@ public class VideoServlet extends HttpServlet {
     }
 
     private Category findCategory(String categoryId) {
+        if (categoryId == null || categoryId.isBlank()) {
+            return null;
+        }
         Integer id = parseInt(categoryId);
-        return id == null ? null : categoryService.findById(id);
+        Category category = id == null || id <= 0 ? null : categoryService.findById(id);
+        if (category == null) {
+            throw new IllegalArgumentException("Danh mục không hợp lệ");
+        }
+        return category;
     }
 
     private static boolean canEdit(Video video, User user) {
@@ -313,10 +300,5 @@ public class VideoServlet extends HttpServlet {
         } catch (NumberFormatException e) {
             return null;
         }
-    }
-
-    private static int parseIntOr(String s, int def) {
-        Integer v = parseInt(s);
-        return v == null ? def : v;
     }
 }

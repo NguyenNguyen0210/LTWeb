@@ -17,7 +17,7 @@
 
         <div class="card-body">
             <c:if test="${not empty error}">
-                <div class="alert alert-error">${fn:escapeXml(error)}</div>
+                <div class="alert alert-error" role="alert">${fn:escapeXml(error)}</div>
             </c:if>
 
             <%-- enctype multipart/form-data bat buoc phai co de upload file --%>
@@ -32,7 +32,7 @@
 
                 <div class="field">
                     <label for="images">Link images</label>
-                    <input type="text" id="images" name="images"
+                    <input type="text" id="images" name="images" maxlength="500"
                            value="${fn:escapeXml(images)}" placeholder="https://... (có thể bỏ trống)">
                     <div class="hint">Dán link ảnh online, hoặc upload file ở ô bên dưới.</div>
                 </div>

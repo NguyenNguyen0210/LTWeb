@@ -48,10 +48,10 @@
                                     <div class="poster poster-empty">▶</div>
                                 </c:when>
                                 <c:when test="${fn:startsWith(v.poster, 'http')}">
-                                    <img class="poster" src="${v.poster}" alt="${fn:escapeXml(v.title)}">
+                                    <img class="poster" src="${fn:escapeXml(v.poster)}" alt="${fn:escapeXml(v.title)}">
                                 </c:when>
                                 <c:otherwise>
-                                    <img class="poster" src="${ctx}/media?fname=${v.poster}"
+                                    <img class="poster" src="${ctx}/media?fname=${fn:escapeXml(v.poster)}"
                                          alt="${fn:escapeXml(v.title)}">
                                 </c:otherwise>
                             </c:choose>

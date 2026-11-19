@@ -13,7 +13,7 @@
         <p class="sub">Mã xác nhận OTP sẽ được gửi tới email của bạn</p>
 
         <c:if test="${not empty error}">
-            <div class="alert alert-error">${fn:escapeXml(error)}</div>
+            <div class="alert alert-error" role="alert">${fn:escapeXml(error)}</div>
         </c:if>
 
         <form method="post" action="${ctx}/register">
@@ -25,21 +25,21 @@
 
             <div class="field">
                 <label for="email">Email</label>
-                <input type="text" id="email" name="email" value="${fn:escapeXml(email)}"
+                <input type="email" id="email" name="email" maxlength="100" value="${fn:escapeXml(email)}"
                        placeholder="you@example.com" autocomplete="email" required>
                 <div class="hint">Dùng email thật để nhận được mã OTP.</div>
             </div>
 
             <div class="field">
                 <label for="password">Mật khẩu</label>
-                <input type="password" id="password" name="password"
+                <input type="password" id="password" name="password" maxlength="72"
                        placeholder="Ít nhất 6 ký tự" minlength="6" autocomplete="new-password" required>
-                <div class="hint">Mật khẩu được mã hóa BCrypt trước khi lưu vào database.</div>
+                <div class="hint">Mật khẩu được băm bằng BCrypt trước khi lưu vào database.</div>
             </div>
 
             <div class="field">
                 <label for="confirm">Nhập lại mật khẩu</label>
-                <input type="password" id="confirm" name="confirm"
+                <input type="password" id="confirm" name="confirm" maxlength="72"
                        placeholder="Nhập lại mật khẩu" minlength="6" autocomplete="new-password" required>
             </div>
 

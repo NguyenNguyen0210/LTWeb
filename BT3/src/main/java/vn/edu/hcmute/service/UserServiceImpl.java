@@ -2,19 +2,16 @@ package vn.edu.hcmute.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import vn.edu.hcmute.dao.IUserDao;
 import vn.edu.hcmute.dao.UserDao;
 import vn.edu.hcmute.entity.User;
 import vn.edu.hcmute.util.Constants;
+import vn.edu.hcmute.util.FormValidation;
 import vn.edu.hcmute.util.OtpUtil;
 import vn.edu.hcmute.util.PasswordUtil;
 
 public class UserServiceImpl implements IUserService {
-
-    /** Kiem tra dinh dang email o muc co ban (du de bat loi go sai). */
-    private static final Pattern EMAIL = Pattern.compile("^[\\w.+-]+@[\\w-]+(\\.[\\w-]+)+$");
 
     private final IUserDao userDao = new UserDao();
 
@@ -42,9 +39,9 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     public boolean register(String email, String fullname, String rawPassword, String confirmPassword) {
-        email = normalizeEmail(email);
-        validateEmail(email);
-        validatePassword(rawPassword, confirmPassword);
+        email = FormValidation.email(email);
+        fullname = FormValidation.required(fullname, "Họ tên", 100);
+        FormValidation.newPassword(rawPassword, confirmPassword);
 
         User existing = userDao.findByEmail(email);
         if (existing != null && existing.getStatus() != User.STATUS_INACTIVE) {
@@ -90,7 +87,7 @@ public class UserServiceImpl implements IUserService {
         if (user.getOtp() == null) {
             throw new IllegalStateException("Tài khoản chưa có mã xác nhận, vui lòng gửi lại mã");
         }
-        if (!user.isOtpValid(otp)) {
+        if (!user.isOtpValid(FormValidation.otp(otp))) {
             throw new IllegalArgumentException("Mã xác nhận không đúng hoặc đã hết hạn");
         }
 
@@ -118,10 +115,8 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     public User login(String email, String rawPassword) {
-        email = normalizeEmail(email);
-        if (email.isEmpty() || rawPassword == null || rawPassword.isEmpty()) {
-            throw new IllegalArgumentException("Vui lòng nhập email và mật khẩu");
-        }
+        email = FormValidation.email(email);
+        FormValidation.loginPassword(rawPassword);
 
         User user = userDao.findByEmail(email);
 
@@ -143,8 +138,7 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     public boolean requestPasswordReset(String email) {
-        email = normalizeEmail(email);
-        validateEmail(email);
+        email = FormValidation.email(email);
 
         User user = userDao.findByEmail(email);
         if (user == null) {
@@ -163,12 +157,12 @@ public class UserServiceImpl implements IUserService {
     @Override
     public void resetPassword(String email, String otp, String newPassword, String confirmPassword) {
         User user = requireUser(email);
-        validatePassword(newPassword, confirmPassword);
+        FormValidation.newPassword(newPassword, confirmPassword);
 
         if (user.getOtp() == null) {
             throw new IllegalStateException("Chưa có yêu cầu đặt lại mật khẩu, vui lòng thực hiện lại");
         }
-        if (!user.isOtpValid(otp)) {
+        if (!user.isOtpValid(FormValidation.otp(otp))) {
             throw new IllegalArgumentException("Mã xác nhận không đúng hoặc đã hết hạn");
         }
 
@@ -190,32 +184,10 @@ public class UserServiceImpl implements IUserService {
     // ==================== TIEN ICH ====================
 
     private User requireUser(String email) {
-        User user = userDao.findByEmail(normalizeEmail(email));
+        User user = userDao.findByEmail(FormValidation.email(email));
         if (user == null) {
             throw new IllegalArgumentException("Không tìm thấy tài khoản với email này");
         }
         return user;
-    }
-
-    private static String normalizeEmail(String email) {
-        return email == null ? "" : email.trim().toLowerCase();
-    }
-
-    private static void validateEmail(String email) {
-        if (email.isEmpty()) {
-            throw new IllegalArgumentException("Email không được để trống");
-        }
-        if (!EMAIL.matcher(email).matches()) {
-            throw new IllegalArgumentException("Email không đúng định dạng");
-        }
-    }
-
-    private static void validatePassword(String password, String confirm) {
-        if (password == null || password.length() < 6) {
-            throw new IllegalArgumentException("Mật khẩu phải có ít nhất 6 ký tự");
-        }
-        if (!password.equals(confirm)) {
-            throw new IllegalArgumentException("Mật khẩu nhập lại không khớp");
-        }
     }
 }

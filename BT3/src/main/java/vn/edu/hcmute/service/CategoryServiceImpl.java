@@ -5,6 +5,7 @@ import java.util.List;
 import vn.edu.hcmute.dao.CategoryDao;
 import vn.edu.hcmute.dao.ICategoryDao;
 import vn.edu.hcmute.entity.Category;
+import vn.edu.hcmute.util.FormValidation;
 
 /**
  * Tang Service: chua nghiep vu, goi xuong DAO.
@@ -16,6 +17,7 @@ public class CategoryServiceImpl implements ICategoryService {
 
     @Override
     public void insert(Category category) {
+        validate(category);
         Category cate = this.findByCategoryname(category.getCategoryname());
         if (cate != null) {
             throw new IllegalArgumentException("Tên danh mục \"" + category.getCategoryname() + "\" đã tồn tại");
@@ -25,6 +27,7 @@ public class CategoryServiceImpl implements ICategoryService {
 
     @Override
     public void update(Category category) {
+        validate(category);
         Category cate = this.findById(category.getCategoryid());
         if (cate == null) {
             throw new IllegalArgumentException("Không tìm thấy danh mục cần cập nhật");
@@ -34,6 +37,13 @@ public class CategoryServiceImpl implements ICategoryService {
             throw new IllegalArgumentException("Tên danh mục \"" + category.getCategoryname() + "\" đã tồn tại");
         }
         cateDao.update(category);
+    }
+
+    private void validate(Category category) {
+        category.setCategoryname(FormValidation.required(category.getCategoryname(), "Tên danh mục", 50));
+        if (category.getStatus() != 0 && category.getStatus() != 1) {
+            throw new IllegalArgumentException("Trạng thái không hợp lệ");
+        }
     }
 
     @Override

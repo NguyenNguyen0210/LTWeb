@@ -1,13 +1,7 @@
 package vn.edu.hcmute.controller;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -16,11 +10,12 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import vn.edu.hcmute.util.View;
-import jakarta.servlet.http.Part;
 import vn.edu.hcmute.entity.Category;
 import vn.edu.hcmute.service.CategoryServiceImpl;
 import vn.edu.hcmute.service.ICategoryService;
 import vn.edu.hcmute.util.Constants;
+import vn.edu.hcmute.util.FormValidation;
+import vn.edu.hcmute.util.UploadUtil;
 
 @MultipartConfig(maxFileSize = 5 * 1024 * 1024, maxRequestSize = 10 * 1024 * 1024)
 @WebServlet(urlPatterns = { "/admin/categories", "/admin/category/add", "/admin/category/insert",
@@ -29,22 +24,20 @@ public class CategoryController extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
 
-    private static final Set<String> ALLOWED_EXT = Set.of("jpg", "jpeg", "png", "gif", "webp", "bmp");
-
     public ICategoryService cateService = new CategoryServiceImpl();
 
     // ===================== GET =====================
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String url = req.getRequestURI();
+        String url = req.getServletPath();
 
-        if (url.contains("/admin/categories")) {
+        if (url.equals("/admin/categories")) {
             showList(req, resp);
 
-        } else if (url.contains("/admin/category/add")) {
+        } else if (url.equals("/admin/category/add")) {
             View.render(req, resp, "/views/admin/category-add.jsp");
 
-        } else if (url.contains("/admin/category/edit")) {
+        } else if (url.equals("/admin/category/edit")) {
             Integer id = parseInt(req.getParameter("id"));
             if (id == null) {
                 flash(req, "error", "Id không hợp lệ");
@@ -60,7 +53,7 @@ public class CategoryController extends HttpServlet {
             req.setAttribute("cate", category);
             View.render(req, resp, "/views/admin/category-edit.jsp");
 
-        } else { // /admin/category/delete
+        } else if (url.equals("/admin/category/delete")) {
             Integer id = parseInt(req.getParameter("id"));
             if (id == null) {
                 flash(req, "error", "Id không hợp lệ");
@@ -74,19 +67,26 @@ public class CategoryController extends HttpServlet {
                 }
             }
             resp.sendRedirect(req.getContextPath() + "/admin/categories");
+        } else {
+            resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
         }
     }
 
     // ===================== POST =====================
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String url = req.getRequestURI();
+        String url = req.getServletPath();
 
-        if (url.contains("/admin/category/insert")) {
-            handleInsert(req, resp);
-
-        } else if (url.contains("/admin/category/update")) {
-            handleUpdate(req, resp);
+        try {
+            if (url.equals("/admin/category/insert")) {
+                handleInsert(req, resp);
+            } else if (url.equals("/admin/category/update")) {
+                handleUpdate(req, resp);
+            } else {
+                resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+            }
+        } catch (IllegalStateException e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Ảnh không được vượt quá 5 MB");
         }
     }
 
@@ -128,140 +128,79 @@ public class CategoryController extends HttpServlet {
     }
 
     private void handleInsert(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String categoryname = trim(req.getParameter("categoryname"));
-        String images = trim(req.getParameter("images"));
-        Integer status = parseInt(req.getParameter("status"));
-
-        if (categoryname == null) {
-            forwardAdd(req, resp, "Tên danh mục không được để trống", categoryname, images, status);
+        String name = req.getParameter("categoryname");
+        String imageLink = req.getParameter("images");
+        String status = req.getParameter("status");
+        String uploaded = null;
+        try {
+            Category category = new Category();
+            category.setCategoryname(FormValidation.required(name, "Tên danh mục", 50));
+            category.setStatus(FormValidation.state(status, 1));
+            uploaded = UploadUtil.save(req.getPart("images1"), UploadUtil.IMAGE_EXT, "Ảnh danh mục");
+            String image = uploaded != null ? uploaded : FormValidation.mediaLink(imageLink, null, "Link ảnh");
+            category.setImages(image == null ? Constants.DEFAULT_IMAGE : image);
+            cateService.insert(category);
+        } catch (IllegalArgumentException e) {
+            UploadUtil.deleteQuietly(uploaded);
+            forwardAdd(req, resp, e.getMessage(), name, imageLink, parseInt(status));
+            return;
+        } catch (Exception e) {
+            UploadUtil.deleteQuietly(uploaded);
+            log("Không thêm được danh mục", e);
+            forwardAdd(req, resp, "Không thể thêm danh mục. Vui lòng thử lại.", name, imageLink, parseInt(status));
             return;
         }
-
-        Category category = new Category();
-        category.setCategoryname(categoryname);
-        category.setStatus(status != null ? status : 1);
-
-        try {
-            String uploaded = saveUpload(req);
-            if (uploaded != null) {
-                category.setImages(uploaded);
-            } else if (images != null) {
-                category.setImages(images);
-            } else {
-                category.setImages(Constants.DEFAULT_IMAGE);
-            }
-
-            cateService.insert(category);
-            flash(req, "success", "Đã thêm danh mục \"" + categoryname + "\"");
-            resp.sendRedirect(req.getContextPath() + "/admin/categories");
-
-        } catch (IllegalArgumentException e) {
-            forwardAdd(req, resp, e.getMessage(), categoryname, images, status);
-        } catch (Exception e) {
-            e.printStackTrace();
-            forwardAdd(req, resp, "Lỗi khi thêm: " + e.getMessage(), categoryname, images, status);
-        }
+        flash(req, "success", "Đã thêm danh mục");
+        resp.sendRedirect(req.getContextPath() + "/admin/categories");
     }
 
     private void handleUpdate(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        Integer categoryid = parseInt(req.getParameter("categoryid"));
-        String categoryname = trim(req.getParameter("categoryname"));
-        String images = trim(req.getParameter("images"));
-        Integer status = parseInt(req.getParameter("status"));
-
-        if (categoryid == null) {
-            flash(req, "error", "Id không hợp lệ");
-            resp.sendRedirect(req.getContextPath() + "/admin/categories");
-            return;
-        }
-
-        Category category = cateService.findById(categoryid);
+        Integer id = parseInt(req.getParameter("categoryid"));
+        Category category = id == null ? null : cateService.findById(id);
         if (category == null) {
-            flash(req, "error", "Không tìm thấy danh mục có id = " + categoryid);
+            flash(req, "error", "Không tìm thấy danh mục cần cập nhật");
             resp.sendRedirect(req.getContextPath() + "/admin/categories");
             return;
         }
 
-        if (categoryname == null) {
-            req.setAttribute("cate", category);
-            req.setAttribute("error", "Tên danh mục không được để trống");
-            View.render(req, resp, "/views/admin/category-edit.jsp");
-            return;
-        }
-
-        String fileold = category.getImages();
-        category.setCategoryname(categoryname);
-        category.setStatus(status != null ? status : category.getStatus());
-
+        String oldImage = category.getImages();
+        String name = req.getParameter("categoryname");
+        String imageLink = req.getParameter("images");
+        String uploaded = null;
         try {
-            String uploaded = saveUpload(req);
-            if (uploaded != null) {
-                // Co anh moi -> xoa file cu tren dia (chi xoa khi la file upload, khong xoa URL)
-                if (fileold != null && !fileold.startsWith("http")) {
-                    deleteFile(Paths.get(Constants.DIR, fileold).toString());
-                }
-                category.setImages(uploaded);
-            } else if (images != null) {
-                category.setImages(images);
-            } else {
-                category.setImages(fileold);
-            }
-
+            category.setCategoryname(FormValidation.required(name, "Tên danh mục", 50));
+            category.setStatus(FormValidation.state(req.getParameter("status"), category.getStatus()));
+            uploaded = UploadUtil.save(req.getPart("images1"), UploadUtil.IMAGE_EXT, "Ảnh danh mục");
+            String image = uploaded != null ? uploaded : FormValidation.mediaLink(imageLink, oldImage, "Link ảnh");
+            category.setImages(image == null ? oldImage : image);
             cateService.update(category);
-            flash(req, "success", "Đã cập nhật danh mục \"" + categoryname + "\"");
-            resp.sendRedirect(req.getContextPath() + "/admin/categories");
-
         } catch (IllegalArgumentException e) {
-            req.setAttribute("cate", category);
-            req.setAttribute("error", e.getMessage());
-            View.render(req, resp, "/views/admin/category-edit.jsp");
+            UploadUtil.deleteQuietly(uploaded);
+            forwardEdit(req, resp, category, name, imageLink, oldImage, e.getMessage());
+            return;
         } catch (Exception e) {
-            e.printStackTrace();
-            req.setAttribute("cate", category);
-            req.setAttribute("error", "Lỗi khi cập nhật: " + e.getMessage());
-            View.render(req, resp, "/views/admin/category-edit.jsp");
+            UploadUtil.deleteQuietly(uploaded);
+            log("Không cập nhật được danh mục", e);
+            forwardEdit(req, resp, category, name, imageLink, oldImage, "Không thể cập nhật danh mục. Vui lòng thử lại.");
+            return;
         }
+
+        if (!java.util.Objects.equals(oldImage, category.getImages())) {
+            UploadUtil.deleteQuietly(oldImage);
+        }
+        flash(req, "success", "Đã cập nhật danh mục");
+        resp.sendRedirect(req.getContextPath() + "/admin/categories");
     }
 
-    // ===================== TIEN ICH =====================
-
-    /**
-     * Luu file upload vao Constants.DIR, tra ve ten file moi (da doi ten bang
-     * timestamp de khong trung), hoac null neu nguoi dung khong chon file.
-     */
-    private String saveUpload(HttpServletRequest req) throws IOException, ServletException {
-        Part part;
-        try {
-            part = req.getPart("images1");
-        } catch (IllegalStateException e) {
-            throw new IOException("File upload quá lớn (tối đa 5MB)", e);
-        }
-
-        if (part == null || part.getSize() == 0) {
-            return null;
-        }
-
-        String submitted = part.getSubmittedFileName();
-        if (submitted == null || submitted.isBlank()) {
-            return null;
-        }
-
-        String filename = Paths.get(submitted).getFileName().toString();
-        int index = filename.lastIndexOf('.');
-        String ext = index >= 0 ? filename.substring(index + 1).toLowerCase(Locale.ROOT) : "";
-
-        if (!ALLOWED_EXT.contains(ext)) {
-            throw new IllegalArgumentException("Chỉ chấp nhận file ảnh: " + String.join(", ", ALLOWED_EXT));
-        }
-
-        File uploadDir = new File(Constants.DIR);
-        if (!uploadDir.exists()) {
-            uploadDir.mkdirs();
-        }
-
-        String fname = System.currentTimeMillis() + "." + ext;
-        part.write(Constants.DIR + File.separator + fname);
-        return fname;
+    private void forwardEdit(HttpServletRequest req, HttpServletResponse resp, Category category,
+                             String name, String imageLink, String oldImage, String error)
+            throws ServletException, IOException {
+        category.setImages(oldImage);
+        req.setAttribute("cate", category);
+        req.setAttribute("categoryname", name);
+        req.setAttribute("images", imageLink);
+        req.setAttribute("error", error);
+        View.render(req, resp, "/views/admin/category-edit.jsp");
     }
 
     private void forwardAdd(HttpServletRequest req, HttpServletResponse resp, String error,
@@ -273,28 +212,10 @@ public class CategoryController extends HttpServlet {
         View.render(req, resp, "/views/admin/category-add.jsp");
     }
 
-    public static void deleteFile(String filePath) {
-        try {
-            Path path = Paths.get(filePath);
-            Files.deleteIfExists(path);
-        } catch (IOException e) {
-            // Khong xoa duoc file cu cung khong nen lam hong thao tac update
-            e.printStackTrace();
-        }
-    }
-
     /** Thong bao 1 lan (flash) - hien o trang sau khi redirect roi tu xoa. */
     private void flash(HttpServletRequest req, String type, String message) {
         req.getSession().setAttribute("flashType", type);
         req.getSession().setAttribute("flashMsg", message);
-    }
-
-    private static String trim(String s) {
-        if (s == null) {
-            return null;
-        }
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
     }
 
     private static Integer parseInt(String s) {
