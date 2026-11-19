@@ -28,6 +28,7 @@ GO
 CREATE TABLE dbo.users
 (
     UserId    INT IDENTITY (1,1) NOT NULL PRIMARY KEY,
+    UserVersion BIGINT NOT NULL DEFAULT (0),
     Email     NVARCHAR(100) NOT NULL,
     Fullname  NVARCHAR(100) NULL,
     Password  NVARCHAR(100) NOT NULL,   -- chuoi BCrypt: $2a$10$...

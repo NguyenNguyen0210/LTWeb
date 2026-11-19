@@ -1,6 +1,7 @@
 package vn.edu.hcmute.dao;
 
 import java.util.List;
+import java.util.function.Function;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
@@ -123,6 +124,51 @@ public class UserDao implements IUserDao {
             return ((Long) query.getSingleResult()).intValue();
         } finally {
             enma.close();
+        }
+    }
+
+    @Override
+    public boolean updateProfileDetails(int userId, String fullname, String phone, String avatar) {
+        return updateActiveUser(enma -> {
+            String avatarAssignment = avatar == null ? "" : ", u.avatar = :avatar";
+            Query query = enma.createQuery("UPDATE User u SET u.fullname = :fullname, u.phone = :phone"
+                    + avatarAssignment + ", u.rowVersion = u.rowVersion + 1 WHERE u.userid = :id AND u.status = :active");
+            query.setParameter("id", userId);
+            query.setParameter("active", User.STATUS_ACTIVE);
+            query.setParameter("fullname", fullname);
+            query.setParameter("phone", phone);
+            if (avatar != null) {
+                query.setParameter("avatar", avatar);
+            }
+            return query;
+        });
+    }
+
+    @Override
+    public boolean changeEmail(int userId, String currentEmail, String newEmail) {
+        return updateActiveUser(enma -> enma.createQuery(
+                "UPDATE User u SET u.email = :newEmail, u.otp = null, u.otpExpiry = null, u.rowVersion = u.rowVersion + 1 "
+                        + "WHERE u.userid = :id AND u.email = :currentEmail AND u.status = :active")
+                .setParameter("newEmail", newEmail)
+                .setParameter("currentEmail", currentEmail)
+                .setParameter("id", userId)
+                .setParameter("active", User.STATUS_ACTIVE));
+    }
+
+    private boolean updateActiveUser(Function<EntityManager, Query> queryBuilder) {
+        try (EntityManager enma = JpaConfig.getEntityManager()) {
+            EntityTransaction transaction = enma.getTransaction();
+            try {
+                transaction.begin();
+                int affected = queryBuilder.apply(enma).executeUpdate();
+                transaction.commit();
+                return affected == 1;
+            } catch (RuntimeException e) {
+                if (transaction.isActive()) {
+                    transaction.rollback();
+                }
+                throw e;
+            }
         }
     }
 }

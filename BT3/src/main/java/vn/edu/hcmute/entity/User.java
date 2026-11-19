@@ -14,6 +14,7 @@ import jakarta.persistence.NamedQuery;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -44,6 +45,10 @@ public class User implements Serializable {
     @Column(name = "UserId")
     private int userid;
 
+    @Version
+    @Column(name = "UserVersion", nullable = false, columnDefinition = "bigint default 0")
+    private long rowVersion;
+
     @Column(name = "Email", columnDefinition = "nvarchar(100) not null")
     private String email;
 
@@ -55,6 +60,7 @@ public class User implements Serializable {
      * dang $2a$10$...). Khong the dao nguoc, chi kiem tra bang BCrypt.checkpw().
      */
     @Column(name = "Password", columnDefinition = "nvarchar(100) not null")
+    @ToString.Exclude
     private String password;
 
     @Column(name = "Phone", columnDefinition = "nvarchar(20) null")
@@ -71,6 +77,7 @@ public class User implements Serializable {
 
     /** Ma OTP 6 so dang cho (kich hoat tai khoan hoac dat lai mat khau) */
     @Column(name = "Otp", columnDefinition = "nvarchar(10) null")
+    @ToString.Exclude
     private String otp;
 
     @Column(name = "OtpExpiry")

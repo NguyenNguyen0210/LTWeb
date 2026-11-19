@@ -48,6 +48,7 @@ public class ImageServlet extends HttpServlet {
 
         String contentType = getServletContext().getMimeType(fname);
         resp.setContentType(contentType != null ? contentType : "application/octet-stream");
+        resp.setHeader("X-Content-Type-Options", "nosniff");
         resp.setHeader("Accept-Ranges", "bytes");
         resp.setHeader("Cache-Control", "public, max-age=86400");
 

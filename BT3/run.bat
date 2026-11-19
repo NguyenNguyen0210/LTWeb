@@ -8,7 +8,7 @@ setlocal
 set "CATALINA_HOME=D:\apache-tomcat-11.0.27"
 set "APP_NAME=bt3"
 set "PROJECT_DIR=%~dp0"
-set "URL=http://localhost:8080/%APP_NAME%/admin/categories"
+set "URL=http://localhost:8080/%APP_NAME%/home"
 
 cd /d "%PROJECT_DIR%"
 
@@ -29,7 +29,6 @@ if errorlevel 1 (
 )
 
 echo [2/3] Dang deploy %APP_NAME%.war len Tomcat...
-if exist "%CATALINA_HOME%\webapps\%APP_NAME%" rmdir /S /Q "%CATALINA_HOME%\webapps\%APP_NAME%"
 copy /Y "%PROJECT_DIR%target\%APP_NAME%.war" "%CATALINA_HOME%\webapps\" >nul
 if errorlevel 1 (
     echo [LOI] Khong copy duoc file war. Tomcat co the dang khoa file.

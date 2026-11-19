@@ -1,9 +1,12 @@
 <header class="layout-nav">
-    <nav class="navbar navbar-expand flex-wrap container gap-2 py-3" aria-label="Điều hướng chính">
+    <nav class="navbar navbar-expand flex-wrap container gap-2 px-3 py-3" aria-label="Điều hướng chính">
         <a class="navbar-brand brand" href="${ctx}/home"><span class="logo">LT</span> LTWeb</a>
         <div class="navbar-nav flex-wrap gap-2 me-auto">
             <a class="nav-link" href="${ctx}/home">Trang chủ</a>
             <a class="nav-link" href="${ctx}/video">Video của tôi</a>
+            <c:if test="${not empty sessionScope.user}">
+                <a class="nav-link" href="${ctx}/profile">Hồ sơ</a>
+            </c:if>
             <c:if test="${sessionScope.user.admin}">
                 <a class="nav-link" href="${ctx}/admin/categories">Quản trị</a>
             </c:if>

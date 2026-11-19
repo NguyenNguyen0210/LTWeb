@@ -893,3 +893,26 @@ a.brand {
         transform: none;
     }
 }
+
+.profile-page {
+    max-width: 960px;
+}
+
+.profile-avatar {
+    width: 72px;
+    height: 72px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    object-fit: cover;
+    font-size: 24px;
+}
+
+.profile-page strong {
+    overflow-wrap: anywhere;
+}
+
+.profile-page input:focus-visible,
+.auth-card input:focus-visible {
+    outline: 2px solid #5147da;
+    outline-offset: 2px;
+}

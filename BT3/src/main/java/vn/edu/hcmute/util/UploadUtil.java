@@ -63,7 +63,7 @@ public final class UploadUtil {
 
     /** Xoa file upload cu (bo qua loi de khong lam hong thao tac update). */
     public static void deleteQuietly(String fname) {
-        if (fname == null || !fname.matches("[0-9]{13,16}\\\\.[a-z0-9]{3,4}")) {
+        if (fname == null || !fname.matches("[0-9]{13,16}[.][a-z0-9]{3,4}")) {
             return;
         }
         try {

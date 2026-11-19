@@ -22,4 +22,8 @@ public interface IUserDao {
     List<User> findAll();
 
     int count();
+
+    boolean updateProfileDetails(int userId, String fullname, String phone, String avatar);
+
+    boolean changeEmail(int userId, String currentEmail, String newEmail);
 }

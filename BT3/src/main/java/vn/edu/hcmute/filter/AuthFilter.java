@@ -19,7 +19,7 @@ import vn.edu.hcmute.util.Flash;
  *  - /admin/*        : phai dang nhap VA co role = admin
  *  - /video, /video/*: phai dang nhap (rieng /video/detail cho phep xem tu trang chu)
  */
-@WebFilter(urlPatterns = { "/admin/*", "/video", "/video/*" })
+@WebFilter(urlPatterns = { "/admin/*", "/video", "/video/*", "/profile" })
 public class AuthFilter implements Filter {
 
     @Override
