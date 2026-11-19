@@ -1,0 +1,27 @@
+<header class="layout-nav">
+    <nav class="navbar navbar-expand flex-wrap container gap-2 px-3 py-3" aria-label="Điều hướng chính">
+        <a class="navbar-brand brand" href="${ctx}/home"><span class="logo">LT</span> LTWeb</a>
+        <div class="navbar-nav flex-wrap gap-2 me-auto">
+            <a class="nav-link" href="${ctx}/home">Trang chủ</a>
+            <a class="nav-link" href="${ctx}/video">Video của tôi</a>
+            <c:if test="${not empty sessionScope.user}">
+                <a class="nav-link" href="${ctx}/profile">Hồ sơ</a>
+            </c:if>
+            <c:if test="${sessionScope.user.admin}">
+                <a class="nav-link" href="${ctx}/admin/categories">Quản trị</a>
+            </c:if>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <c:choose>
+                <c:when test="${empty sessionScope.user}">
+                    <a class="btn btn-light btn-sm" href="${ctx}/login">Đăng nhập</a>
+                    <a class="btn btn-primary btn-sm" href="${ctx}/register">Đăng ký</a>
+                </c:when>
+                <c:otherwise>
+                    <span class="navbar-text"><c:out value="${sessionScope.user.displayName}" /></span>
+                    <a class="btn btn-light btn-sm" href="${ctx}/logout">Đăng xuất</a>
+                </c:otherwise>
+            </c:choose>
+        </div>
+    </nav>
+</header>

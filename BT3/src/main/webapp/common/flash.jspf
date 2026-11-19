@@ -1,0 +1,7 @@
+<c:if test="${not empty sessionScope.flashMsg}">
+    <div class="alert ${sessionScope.flashType == 'success' ? 'alert-success' : 'alert-error'}" role="status">
+        <c:out value="${sessionScope.flashMsg}" />
+    </div>
+    <c:remove var="flashMsg" scope="session" />
+    <c:remove var="flashType" scope="session" />
+</c:if>

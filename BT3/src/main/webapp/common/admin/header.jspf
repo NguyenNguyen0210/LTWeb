@@ -1,0 +1,11 @@
+<header class="layout-nav">
+    <nav class="navbar navbar-expand flex-wrap container gap-2 px-3 py-3" aria-label="Điều hướng quản trị">
+        <a class="navbar-brand brand" href="${ctx}/admin/categories"><span class="logo">LT</span> LTWeb Quản trị</a>
+        <div class="navbar-nav flex-wrap gap-2 me-auto">
+            <a class="nav-link" href="${ctx}/admin/categories">Danh mục</a>
+            <a class="nav-link" href="${ctx}/admin/category/add">Thêm danh mục</a>
+            <a class="nav-link" href="${ctx}/home">Trang người dùng</a>
+        </div>
+        <a class="btn btn-light btn-sm" href="${ctx}/logout">Đăng xuất</a>
+    </nav>
+</header>
